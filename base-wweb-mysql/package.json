@@ -4,7 +4,7 @@
     "description": "",
     "main": "app.js",
     "scripts": {
-        "prestart": "npx eslint . --no-ignore",
+        "prestart": "npx eslint app.js investment-monitor.js keepalive.js match-results-api.js match-watch.js migrate-mysql-to-mongodb.js mongo-storage.js provider-readiness.js runtime-control.js server-port.js setup-db.js sportscore.js test --no-ignore",
         "pre-copy": "cd .. && npm run  copy.lib base-wweb-mysql",
         "start": "node app.js",
         "setup-db": "node setup-db.js",
