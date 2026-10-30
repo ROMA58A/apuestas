@@ -4,6 +4,7 @@ services:
     runtime: docker
     rootDir: base-wweb-mysql
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
     plan: free
     envVars:
       - key: MONGODB_URI
