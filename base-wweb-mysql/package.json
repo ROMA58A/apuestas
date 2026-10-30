@@ -1,0 +1,31 @@
+{
+    "name": "base-wweb-mysql",
+    "version": "1.0.0",
+    "description": "",
+    "main": "app.js",
+    "scripts": {
+        "prestart": "npx eslint . --no-ignore",
+        "pre-copy": "cd .. && npm run  copy.lib base-wweb-mysql",
+        "start": "node app.js",
+        "migrate:mysql-to-mongodb": "node migrate-mysql-to-mongodb.js",
+        "test": "node --test"
+    },
+    "keywords": [],
+    "dependencies": {
+        "@bot-whatsapp/bot": "latest",
+        "@bot-whatsapp/cli": "latest",
+        "@bot-whatsapp/database": "latest",
+        "@bot-whatsapp/portal": "latest",
+        "@bot-whatsapp/provider": "latest",
+        "dotenv": "^18.0.9",
+        "mongodb": "^6.20.0",
+        "mysql2": "^2.3.3",
+        "whatsapp-web.js": "^1.34.7"
+    },
+    "devDependencies": {
+        "eslint": "^8.52.0",
+        "eslint-plugin-bot-whatsapp": "latest"
+    },
+    "author": "",
+    "license": "ISC"
+}
