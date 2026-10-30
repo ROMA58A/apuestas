@@ -51,11 +51,27 @@ La API escucha por defecto en `http://127.0.0.1:3001`; el portal QR usa `3000`.
 
 El bot crea las colecciones `history`, `match_results` y `match_watchlist` e índices al arrancar.
 
+Para comprobar ahora la conexión y preparar la base `bot_whatsapp` antes de iniciar el bot:
+
+```powershell
+npm run setup-db
+```
+
+El comando usa `MONGODB_URI` del `.env` local. También puedes señalar un archivo de credenciales local sin copiarlas al proyecto:
+
+```powershell
+$env:ATLAS_CREDENTIALS_FILE = "C:\ruta\privada\atlas-credentials.env"
+npm run setup-db
+Remove-Item Env:ATLAS_CREDENTIALS_FILE
+```
+
+El script verifica la conexión y crea/verifica las colecciones e índices; no imprime la URI ni elimina datos existentes.
+
 ### Migrar datos de una instalación MySQL anterior
 
 El migrador copia el historial de WhatsApp, los resultados y la lista de seguimiento, de forma idempotente. Conserva la base MySQL original: no la borres hasta verificar los datos en Atlas.
 
-Configura en el `.env` local `MYSQL_DB_HOST`, `MYSQL_DB_USER`, `MYSQL_DB_PASSWORD`, `MYSQL_DB_NAME` y `MYSQL_DB_PORT` para la base anterior, además de `MONGODB_URI` y `MONGODB_DB_NAME`. Después ejecuta:
+Configura en el `.env` local `MYSQL_DB_HOST`, `MYSQL_DB_USER`, `MYSQL_DB_PASSWORD`, `MYSQL_DB_NAME` y `MYSQL_DB_PORT` para la base anterior, además de `MONGODB_URI` y `MONGODB_DB_NAME`. Si guardas Atlas en otro archivo local, puedes definir `ATLAS_CREDENTIALS_FILE` con la ruta a ese archivo antes de ejecutar el migrador.
 
 ```powershell
 npm run migrate:mysql-to-mongodb

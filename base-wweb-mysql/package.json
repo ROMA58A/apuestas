@@ -7,6 +7,7 @@
         "prestart": "npx eslint . --no-ignore",
         "pre-copy": "cd .. && npm run  copy.lib base-wweb-mysql",
         "start": "node app.js",
+        "setup-db": "node setup-db.js",
         "migrate:mysql-to-mongodb": "node migrate-mysql-to-mongodb.js",
         "test": "node --test"
     },

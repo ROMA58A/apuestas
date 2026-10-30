@@ -1,5 +1,12 @@
 require('dotenv').config()
 
+if (process.env.ATLAS_CREDENTIALS_FILE) {
+    require('dotenv').config({
+        path: process.env.ATLAS_CREDENTIALS_FILE,
+        override: true,
+    })
+}
+
 const mysql = require('mysql2/promise')
 const { MongoClient } = require('mongodb')
 const { getFixtureKey, getWatchKey } = require('./match-watch')
