@@ -6,6 +6,7 @@ const path = require('node:path')
 const { findAvailablePort } = require('./server-port')
 const { createProviderReadiness } = require('./provider-readiness')
 const { createRuntimeControl } = require('./runtime-control')
+const { startKeepalive } = require('./keepalive')
 const { createBot, createProvider, createFlow, addKeyword } = require('@bot-whatsapp/bot')
 const QRPortalWeb = require('@bot-whatsapp/portal')
 const WebWhatsappProvider = require('@bot-whatsapp/provider/web-whatsapp')
@@ -32,11 +33,14 @@ const CHECK_TIME = process.env.CHECK_TIME || '09:00'
 const TIME_ZONE = process.env.TIME_ZONE || 'America/Mexico_City'
 const STATE_FILE = process.env.CHECK_STATE_FILE || './.investment-check-state.json'
 const RUNTIME_FILE = path.join(__dirname, '.bot-runtime.json')
+const IS_RENDER = Boolean(process.env.RENDER_EXTERNAL_URL)
 const MONGODB_URI = process.env.MONGODB_URI
-const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'apuestas'
-const MATCH_API_HOST = process.env.MATCH_API_HOST || '127.0.0.1'
-const MATCH_API_PORT = Number(process.env.MATCH_API_PORT || 3001)
-const PORTAL_PORT = Number(process.env.PORT || 3000)
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'bot_whatsapp'
+const MATCH_API_HOST = process.env.MATCH_API_HOST || (IS_RENDER ? '0.0.0.0' : '127.0.0.1')
+const MATCH_API_PORT = Number(
+    process.env.MATCH_API_PORT || (IS_RENDER ? process.env.PORT : 3001)
+)
+const PORTAL_PORT = Number(process.env.PORTAL_PORT || process.env.PORT || 3000)
 const MATCH_WATCH_INTERVAL = 60_000
 
 const validateConfiguration = () => {
@@ -223,12 +227,16 @@ const main = async () => {
     const matchWatchStore = createMongoMatchWatchStore(
         database.collection('match_watchlist')
     )
-    const portalPort = await findAvailablePort(PORTAL_PORT, undefined, [MATCH_API_PORT])
-    if (portalPort !== PORTAL_PORT) {
+    const portalPort = IS_RENDER
+        ? null
+        : await findAvailablePort(PORTAL_PORT, undefined, [MATCH_API_PORT])
+    if (!IS_RENDER && portalPort !== PORTAL_PORT) {
         console.warn(`El puerto ${PORTAL_PORT} esta ocupado; el portal QR usara ${portalPort}.`)
     }
-    const matchApiPort = await findAvailablePort(MATCH_API_PORT, MATCH_API_HOST, [portalPort])
-    if (matchApiPort !== MATCH_API_PORT) {
+    const matchApiPort = IS_RENDER
+        ? MATCH_API_PORT
+        : await findAvailablePort(MATCH_API_PORT, MATCH_API_HOST, [portalPort])
+    if (!IS_RENDER && matchApiPort !== MATCH_API_PORT) {
         console.warn(`El puerto ${MATCH_API_PORT} esta ocupado; la API usara ${matchApiPort}.`)
     }
     const adapterFlow = createFlow([
@@ -253,7 +261,7 @@ const main = async () => {
         provider: adapterProvider,
         database: adapterDB,
     })
-    QRPortalWeb({ port: portalPort })
+    if (portalPort !== null) QRPortalWeb({ port: portalPort })
     const matchApi = createMatchResultsServer({
         store: createMongoMatchResultsStore(database.collection('match_results')),
         watchStore: matchWatchStore,
@@ -263,8 +271,10 @@ const main = async () => {
         matchApi.once('error', reject)
         matchApi.listen(matchApiPort, MATCH_API_HOST, resolve)
     })
+    const stopKeepalive = startKeepalive()
     const stopServer = await createRuntimeControl(async () => {
         console.log('Deteniendo el bot y cerrando WhatsApp de forma ordenada...')
+        stopKeepalive()
         stopScheduler()
         stopMatchWatchScheduler()
         const closeResource = async (label, close) => {
@@ -320,6 +330,7 @@ const main = async () => {
         }
     })
     console.log(`API de resultados disponible en http://${MATCH_API_HOST}:${matchApiPort}/api/matches`)
+    if (IS_RENDER) console.log(`Health check disponible en http://${MATCH_API_HOST}:${matchApiPort}/health`)
     const stopScheduler = startScheduler(adapterProvider, isProviderReady)
     const stopMatchWatchScheduler = startMatchWatchScheduler(
         adapterProvider,

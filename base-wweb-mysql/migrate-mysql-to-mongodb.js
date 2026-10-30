@@ -17,7 +17,7 @@ const parseOptions = (options) => {
 }
 
 const migrate = async () => {
-    const required = ['MYSQL_DB_HOST', 'MYSQL_DB_USER', 'MYSQL_DB_NAME', 'MONGODB_URI', 'MONGODB_DB_NAME']
+    const required = ['MYSQL_DB_HOST', 'MYSQL_DB_USER', 'MYSQL_DB_NAME', 'MONGODB_URI']
     const missing = required.filter((name) => !process.env[name])
     if (missing.length) {
         throw new Error(`Faltan variables para la migración: ${missing.join(', ')}`)
@@ -35,7 +35,7 @@ const migrate = async () => {
     const mongo = new MongoClient(process.env.MONGODB_URI)
     try {
         await mongo.connect()
-        const db = mongo.db(process.env.MONGODB_DB_NAME)
+        const db = mongo.db(process.env.MONGODB_DB_NAME || 'bot_whatsapp')
         const [historyRows] = await sql.execute(
             'SELECT id, ref, keyword, answer, refSerialize, phone, options, created_at FROM history ORDER BY id'
         )
@@ -104,13 +104,13 @@ const migrate = async () => {
                 }
                 return {
                     updateOne: {
-                        filter: { watchKey: row.watch_key },
+                        filter: { watchKey: getWatchKey(match) },
                         update: {
                             $setOnInsert: {
                                 ...match,
                                 legacyMysqlId: row.id,
                                 fixtureKey: getFixtureKey(match),
-                                watchKey: row.watch_key || getWatchKey(match),
+                                watchKey: getWatchKey(match),
                                 lastHomeScore: row.last_home_score,
                                 lastAwayScore: row.last_away_score,
                                 lastStatus: null,

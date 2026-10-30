@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: apuestas-bot
+    runtime: docker
+    rootDir: base-wweb-mysql
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: bot_whatsapp
+      - key: WHATSAPP_DESTINATION
+        sync: false
+      - key: MATCH_API_TOKEN
+        generateValue: true
+      - key: CHECK_TIME
+        value: "09:00"
+      - key: TIME_ZONE
+        value: America/Mexico_City

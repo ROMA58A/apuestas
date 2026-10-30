@@ -141,6 +141,19 @@ test('returns live SportScore matches with attribution', async (t) => {
         matches: [{ home: 'Equipo A' }],
         attribution: 'Powered by SportScore — https://sportscore.com/',
     })
+
+    test('exposes an unauthenticated health check for Render', async (t) => {
+        const { server, baseUrl } = await startServer(
+            { list: async () => [], create: async () => [] },
+            'private-api-token'
+        )
+        t.after(() => server.close())
+
+        const response = await fetch(`${baseUrl}/health`)
+
+        assert.equal(response.status, 200)
+        assert.deepEqual(await response.json(), { status: 'ok' })
+    })
     assert.deepEqual(query, { sport: 'football', limit: 5 })
 })
 

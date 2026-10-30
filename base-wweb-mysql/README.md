@@ -47,7 +47,7 @@ La API escucha por defecto en `http://127.0.0.1:3001`; el portal QR usa `3000`.
 1. Copia `.env.example` a `.env`.
 2. En Atlas, crea un usuario de base de datos y autoriza la IP donde se ejecutará el bot.
 3. En **Connect → Drivers**, copia la URI de MongoDB en `MONGODB_URI` dentro del `.env` local. No subas ese archivo ni compartas la URI.
-4. Configura `MONGODB_DB_NAME=apuestas` y las demás variables necesarias. Si vas a migrar datos MySQL, ejecuta primero el migrador descrito abajo, antes del primer inicio del bot. Después inicia con `npm install` y `npm start`.
+4. Configura `MONGODB_DB_NAME=bot_whatsapp` para usar la base que compartiste. El enlace de Atlas al explorador no es una URI de conexión; obtén la URI privada desde **Connect → Drivers**. Si vas a migrar datos MySQL, ejecuta primero el migrador descrito abajo, antes del primer inicio del bot. Después inicia con `npm install` y `npm start`.
 
 El bot crea las colecciones `history`, `match_results` y `match_watchlist` e índices al arrancar.
 
@@ -63,16 +63,25 @@ npm run migrate:mysql-to-mongodb
 
 El migrador no se ejecuta al iniciar el bot. No pegues ni subas credenciales.
 
+## Render
+
+El archivo `render.yaml` configura el servicio web Docker. Render asigna `PORT`; en ese entorno la API escucha directamente en dicho puerto y el portal QR local no se inicia. `GET /health` devuelve `{"status":"ok"}` y el bot consulta la URL pública cada 10 minutos para mantener actividad.
+
+Al crear el servicio, configura `MONGODB_URI` con la URI privada de Atlas, `WHATSAPP_DESTINATION` con el destinatario y confirma que la IP de salida de Render tenga acceso a Atlas (o configura el acceso de red correspondiente). El panel debe usar la URL pública del servicio y el `MATCH_API_TOKEN` generado por Render.
+
+El plan Free de Render puede detener servicios y sus archivos son efímeros. El ping no ofrece disponibilidad garantizada ni conserva la sesión local de WhatsApp después de reinicios; para operación continua y persistencia de la sesión, utiliza un plan y almacenamiento persistente adecuados.
+
 ## Otras variables
 
 | Variable | Descripción |
 | --- | --- |
 | `WHATSAPP_DESTINATION` | Número de WhatsApp destinatario en formato internacional. |
 | `MONGODB_URI` | URI privada de conexión de MongoDB Atlas. |
-| `MONGODB_DB_NAME` | Nombre de la base MongoDB; por defecto `apuestas`. |
+| `MONGODB_DB_NAME` | Nombre de la base MongoDB; por defecto `bot_whatsapp`. |
 | `MATCH_API_HOST` / `MATCH_API_PORT` | Interfaz y puerto de la API; por defecto `127.0.0.1:3001`. |
 | `MATCH_API_TOKEN` | Token para proteger la API si se expone fuera del equipo local. |
-| `PORT` | Puerto inicial del portal QR; por defecto `3000`. |
+| `PORT` | Puerto público asignado por Render; en uso local es el puerto inicial del portal QR (`3000`). |
+| `PORTAL_PORT` | Puerto local del portal QR; por defecto `3000`. |
 | `SPORTSCORE_API_BASE` | URL base de SportScore; por defecto `https://sportscore.com`. |
 | `CHECK_TIME` / `TIME_ZONE` | Hora y zona horaria del recordatorio de ganancias. |
 

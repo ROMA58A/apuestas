@@ -135,6 +135,15 @@ const createMatchResultsServer = ({
 }) =>
     http.createServer(async (request, response) => {
         const url = new URL(request.url, 'http://localhost')
+        if (url.pathname === '/health') {
+            if (request.method !== 'GET') {
+                response.setHeader('Allow', 'GET')
+                sendJson(response, 405, { error: 'Método no permitido' })
+                return
+            }
+            sendJson(response, 200, { status: 'ok' })
+            return
+        }
         const watchIdMatch = /^\/api\/matches\/watch\/([a-f\d]{24})$/i.exec(url.pathname)
         const isWatchRoute = url.pathname === '/api/matches/watch' || watchIdMatch
         if (
