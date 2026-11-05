@@ -34,6 +34,7 @@ const CHECK_TIME = process.env.CHECK_TIME || '09:00'
 const TIME_ZONE = process.env.TIME_ZONE || 'America/Mexico_City'
 const STATE_FILE = process.env.CHECK_STATE_FILE || './.investment-check-state.json'
 const RUNTIME_FILE = path.join(__dirname, '.bot-runtime.json')
+const QR_FILE = path.join(__dirname, 'bot.qr.png')
 const IS_RENDER = Boolean(
     process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_ID
 )
@@ -291,6 +292,7 @@ const main = async () => {
         store: createMongoMatchResultsStore(database.collection('match_results')),
         watchStore: matchWatchStore,
         token: process.env.MATCH_API_TOKEN,
+        qrPath: QR_FILE,
     })
     if (startupHealthServer) {
         await new Promise((resolve, reject) => {

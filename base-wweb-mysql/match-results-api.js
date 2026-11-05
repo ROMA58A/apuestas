@@ -1,4 +1,5 @@
 const http = require('node:http')
+const fs = require('node:fs/promises')
 const { timingSafeEqual } = require('node:crypto')
 const { fetchSportScoreMatches, SportScoreError, SUPPORTED_SPORTS } = require('./sportscore')
 const { normalizeWatchedMatch } = require('./match-watch')
@@ -132,6 +133,7 @@ const createMatchResultsServer = ({
     watchStore,
     token,
     loadLiveMatches = fetchSportScoreMatches,
+    qrPath,
 }) =>
     http.createServer(async (request, response) => {
         const url = new URL(request.url, 'http://localhost')
@@ -142,6 +144,36 @@ const createMatchResultsServer = ({
                 return
             }
             sendJson(response, 200, { status: 'ok' })
+            return
+        }
+        if (url.pathname === '/qr') {
+            if (request.method !== 'GET') {
+                response.setHeader('Allow', 'GET')
+                sendJson(response, 405, { error: 'Método no permitido' })
+                return
+            }
+            if (!hasValidToken(request, token)) {
+                sendJson(response, 401, { error: 'Token no válido' })
+                return
+            }
+            if (!qrPath) {
+                sendJson(response, 404, { error: 'QR no configurado' })
+                return
+            }
+            try {
+                const qr = await fs.readFile(qrPath)
+                response.writeHead(200, {
+                    'Content-Type': 'image/png',
+                    'Cache-Control': 'no-store',
+                })
+                response.end(qr)
+            } catch (error) {
+                if (error.code === 'ENOENT') {
+                    sendJson(response, 404, { error: 'QR todavía no generado' })
+                    return
+                }
+                throw error
+            }
             return
         }
         const watchIdMatch = /^\/api\/matches\/watch\/([a-f\d]{24})$/i.exec(url.pathname)
