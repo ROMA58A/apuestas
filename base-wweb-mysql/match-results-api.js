@@ -134,6 +134,7 @@ const createMatchResultsServer = ({
     token,
     loadLiveMatches = fetchSportScoreMatches,
     qrPath,
+    isProviderReady = () => false,
 }) =>
     http.createServer(async (request, response) => {
         const url = new URL(request.url, 'http://localhost')
@@ -179,12 +180,35 @@ button{cursor:pointer}
 <button type="submit">Mostrar QR</button>
 </form>
 <p id="message"></p>
+<p id="connection" aria-live="polite">Estado: esperando conexión...</p>
 <img id="qr" alt="Código QR de WhatsApp" hidden>
 <script>
 const form = document.getElementById('form')
 const token = document.getElementById('token')
 const image = document.getElementById('qr')
 const message = document.getElementById('message')
+const connection = document.getElementById('connection')
+let statusTimer
+const updateConnection = async () => {
+    if (!token.value) return
+    try {
+        const response = await fetch('/whatsapp-status', {
+            headers: { Authorization: 'Bearer ' + token.value },
+            cache: 'no-store',
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        connection.textContent = data.connected
+            ? 'Estado: WhatsApp conectado.'
+            : 'Estado: esperando que escanees el QR...'
+        if (data.connected && statusTimer) {
+            clearInterval(statusTimer)
+            statusTimer = undefined
+        }
+    } catch {
+        connection.textContent = 'Estado: comprobando conexión...'
+    }
+}
 form.addEventListener('submit', async (event) => {
     event.preventDefault()
     image.hidden = true
@@ -202,6 +226,8 @@ form.addEventListener('submit', async (event) => {
         image.src = URL.createObjectURL(blob)
         image.hidden = false
         message.textContent = 'Escanéalo desde WhatsApp > Dispositivos vinculados.'
+        await updateConnection()
+        if (!statusTimer) statusTimer = setInterval(updateConnection, 3000)
     } catch (error) {
         message.textContent = error.message
     }
@@ -209,6 +235,19 @@ form.addEventListener('submit', async (event) => {
 </script>
 </body>
 </html>`)
+            return
+        }
+        if (url.pathname === '/whatsapp-status') {
+            if (request.method !== 'GET') {
+                response.setHeader('Allow', 'GET')
+                sendJson(response, 405, { error: 'Método no permitido' })
+                return
+            }
+            if (!hasValidToken(request, token)) {
+                sendJson(response, 401, { error: 'Token no válido' })
+                return
+            }
+            sendJson(response, 200, { connected: Boolean(isProviderReady()) })
             return
         }
         if (url.pathname === '/qr') {

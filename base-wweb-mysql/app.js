@@ -293,6 +293,7 @@ const main = async () => {
         watchStore: matchWatchStore,
         token: process.env.MATCH_API_TOKEN,
         qrPath: QR_FILE,
+        isProviderReady,
     })
     if (startupHealthServer) {
         await new Promise((resolve, reject) => {
