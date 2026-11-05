@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\MatchDocumentImporter;
+use App\Services\FootballResultsAggregator;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
@@ -24,10 +25,7 @@ class MatchManagerController extends Controller
         try {
             $watchlist = $this->api()->get('/api/matches/watch')->throw()->json('matches', []);
             $results = $this->api()->get('/api/matches?limit=50')->throw()->json('matches', []);
-            $liveMatches = $this->api()
-                ->get('/api/matches/live', ['sport' => 'football', 'limit' => 10])
-                ->throw()
-                ->json('matches', []);
+            $liveMatches = app(FootballResultsAggregator::class)->live();
         } catch (ConnectionException) {
             $apiError = 'No se pudo conectar con la API. Inicia el bot y confirma que la API esté disponible.';
         } catch (RequestException $exception) {

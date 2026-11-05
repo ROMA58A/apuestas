@@ -43,5 +43,11 @@ return [
     'results' => [
         'email' => env('RESULTS_EMAIL', 'ayalarodriguer59@gmail.com'),
     ],
+    'sportapi' => [
+        'key' => env('SPORTAPI_KEY'),
+    ],
+    'soccer_data' => [
+        'key' => env('SOCCER_DATA_KEY'),
+    ],
 
 ];

@@ -34,6 +34,17 @@ MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS=tu-cuenta@gmail.com
 ```
 
+Los marcadores se combinan desde SportAPI, SportScore y Soccer Data. SportScore funciona
+sin clave; para las otras fuentes solicita una clave gratuita y configura:
+
+```env
+SPORTAPI_KEY=
+SOCCER_DATA_KEY=
+```
+
+Si una fuente falla o no está configurada, las demás continúan funcionando. Los partidos
+duplicados se muestran una sola vez.
+
 En otra terminal, deja activo el programador:
 
 ```powershell

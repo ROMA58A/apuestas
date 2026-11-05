@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Services\FootballResultsAggregator;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
 class SendLiveResultsEmail extends Command
@@ -15,24 +15,15 @@ class SendLiveResultsEmail extends Command
     public function handle(): int
     {
         $recipient = (string) config('services.results.email');
-        $apiUrl = rtrim((string) config('services.match_api.url'), '/');
 
-        if ($recipient === '' || $apiUrl === '') {
-            $this->error('Configura RESULTS_EMAIL y MATCH_API_URL en el archivo .env.');
+        if ($recipient === '') {
+            $this->error('Configura RESULTS_EMAIL en el archivo .env.');
 
             return self::FAILURE;
         }
 
         try {
-            $matches = Http::acceptJson()
-                ->withToken((string) config('services.match_api.token'))
-                ->timeout(15)
-                ->get("{$apiUrl}/api/matches/live", [
-                    'sport' => 'football',
-                    'limit' => 10,
-                ])
-                ->throw()
-                ->json('matches', []);
+            $matches = app(FootballResultsAggregator::class)->live();
         } catch (\Throwable $exception) {
             $this->error("No se pudieron consultar los resultados: {$exception->getMessage()}");
 
