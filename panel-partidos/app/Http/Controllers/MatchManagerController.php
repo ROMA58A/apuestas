@@ -18,18 +18,23 @@ class MatchManagerController extends Controller
     {
         $watchlist = [];
         $results = [];
+        $liveMatches = [];
         $apiError = null;
 
         try {
             $watchlist = $this->api()->get('/api/matches/watch')->throw()->json('matches', []);
             $results = $this->api()->get('/api/matches?limit=50')->throw()->json('matches', []);
+            $liveMatches = $this->api()
+                ->get('/api/matches/live', ['sport' => 'football', 'limit' => 10])
+                ->throw()
+                ->json('matches', []);
         } catch (ConnectionException) {
             $apiError = 'No se pudo conectar con la API. Inicia el bot y confirma que la API esté disponible.';
         } catch (RequestException $exception) {
             $apiError = $this->apiError($exception);
         }
 
-        return view('matches.index', compact('watchlist', 'results', 'apiError'));
+        return view('matches.index', compact('watchlist', 'results', 'liveMatches', 'apiError'));
     }
 
     public function storeWatch(Request $request): RedirectResponse

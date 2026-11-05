@@ -22,7 +22,7 @@
         <header class="mb-4 mb-lg-5">
             <div class="text-uppercase small fw-semibold text-primary mb-2">Centro de control</div>
             <h1 class="page-title fw-bold mb-2">Administra tus partidos</h1>
-            <p class="text-secondary mb-0">Importa pronósticos, recibe el seguimiento por WhatsApp y consulta cómo va cada apuesta.</p>
+            <p class="text-secondary mb-0">Importa pronósticos, consulta resultados en vivo y recibe los marcadores por correo.</p>
         </header>
 
         @if (session('status'))
@@ -49,6 +49,39 @@
         @error('file')
             <div class="alert alert-danger" role="alert">{{ $message }}</div>
         @enderror
+
+        <section class="panel-card card mb-4 mb-lg-5">
+            <div class="card-body p-4 p-xl-5">
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h2 class="h5 fw-bold mb-1">Resultados en vivo</h2>
+                        <p class="small text-secondary mb-0">Fútbol actualizado desde SportScore.</p>
+                    </div>
+                    <span class="badge rounded-pill text-bg-success">Correo cada minuto</span>
+                </div>
+                @if (count($liveMatches))
+                    <div class="row g-3">
+                        @foreach ($liveMatches as $match)
+                            <div class="col-12 col-md-6">
+                                <article class="border rounded-3 p-3 h-100">
+                                    <div class="fw-semibold">
+                                        {{ $match['home'] ?? 'Local' }}
+                                        {{ $match['home_score'] ?? '-' }} - {{ $match['away_score'] ?? '-' }}
+                                        {{ $match['away'] ?? 'Visitante' }}
+                                    </div>
+                                    <div class="small text-secondary">
+                                        {{ $match['status_text'] ?? ($match['status'] ?? 'Estado no disponible') }}
+                                        @if (!empty($match['competition'])) · {{ $match['competition'] }} @endif
+                                    </div>
+                                </article>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-secondary mb-0">No hay partidos en vivo o recientes en este momento.</p>
+                @endif
+            </div>
+        </section>
 
         <section class="panel-card card mb-4 mb-lg-5">
             <div class="card-body p-4 p-xl-5">

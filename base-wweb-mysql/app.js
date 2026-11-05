@@ -16,6 +16,7 @@ const {
     createMatchResultsServer,
 } = require('./match-results-api')
 const { fetchSportScoreMatches, formatSportScoreMatches } = require('./sportscore')
+const { startEmailResults } = require('./email-results')
 const {
     checkWatchedMatches,
 } = require('./match-watch')
@@ -46,17 +47,16 @@ const MATCH_API_PORT = Number(
 )
 const PORTAL_PORT = Number(process.env.PORTAL_PORT || process.env.PORT || 3000)
 const MATCH_WATCH_INTERVAL = 60_000
+const WHATSAPP_ENABLED = process.env.DISABLE_WHATSAPP !== 'true'
 
 const validateConfiguration = () => {
-    const required = [
-        'WHATSAPP_DESTINATION',
-        'MONGODB_URI',
-    ]
+    const required = ['MONGODB_URI']
+    if (WHATSAPP_ENABLED) required.push('WHATSAPP_DESTINATION')
     const missing = required.filter((name) => !process.env[name])
     if (missing.length) {
         throw new Error(`Faltan variables de entorno requeridas: ${missing.join(', ')}`)
     }
-    getWhatsAppDestination()
+    if (WHATSAPP_ENABLED) getWhatsAppDestination()
 
     if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(CHECK_TIME)) {
         throw new Error('CHECK_TIME debe tener el formato HH:mm, por ejemplo 09:00')
@@ -265,51 +265,60 @@ const main = async () => {
     if (!IS_RENDER && matchApiPort !== MATCH_API_PORT) {
         console.warn(`El puerto ${MATCH_API_PORT} esta ocupado; la API usara ${matchApiPort}.`)
     }
-    const adapterFlow = createFlow([
-        makeReminderFlow(),
-        makeLiveScoresFlow(fetchSportScoreMatches),
-        makeMatchWatchFlow(matchWatchStore),
-    ])
-    const adapterProvider = createProvider(WebWhatsappProvider)
-    adapterProvider.vendor.on('authenticated', () =>
-        console.log('WhatsApp autenticado correctamente.')
-    )
-    adapterProvider.vendor.on('auth_failure', (message) =>
-        console.error('WhatsApp rechazó la autenticación:', message)
-    )
-    adapterProvider.vendor.on('disconnected', (reason) =>
-        console.warn('WhatsApp se desconectó:', reason)
-    )
-    adapterProvider.vendor.on('change_state', (state) =>
-        console.log('Estado de WhatsApp:', state)
-    )
-    adapterProvider.vendor.on('ready', () =>
-        console.log('Cliente de WhatsApp listo para vincularse.')
-    )
-    const isProviderReady = createProviderReadiness(adapterProvider, {
-        onReady: () => {
-            console.log('WhatsApp está conectado; se habilitaron los recordatorios.')
-            sendBotActiveMessage(adapterProvider).catch((error) =>
-                console.error('No se pudo enviar la confirmación de actividad:', error.message)
-            )
-        },
-        onDisconnect: () =>
-            console.warn('WhatsApp se desconectó; los recordatorios esperan la reconexión.'),
-    })
-
-    await createBot({
-        flow: adapterFlow,
-        provider: adapterProvider,
-        database: adapterDB,
-    })
-    if (portalPort !== null) QRPortalWeb({ port: portalPort })
+    let adapterProvider = null
+    let isProviderReady = () => false
+    let stopScheduler = () => {}
+    let stopMatchWatchScheduler = () => {}
+    if (WHATSAPP_ENABLED) {
+        const adapterFlow = createFlow([
+            makeReminderFlow(),
+            makeLiveScoresFlow(fetchSportScoreMatches),
+            makeMatchWatchFlow(matchWatchStore),
+        ])
+        adapterProvider = createProvider(WebWhatsappProvider)
+        adapterProvider.vendor.on('authenticated', () =>
+            console.log('WhatsApp autenticado correctamente.')
+        )
+        adapterProvider.vendor.on('auth_failure', (message) =>
+            console.error('WhatsApp rechazó la autenticación:', message)
+        )
+        adapterProvider.vendor.on('disconnected', (reason) =>
+            console.warn('WhatsApp se desconectó:', reason)
+        )
+        adapterProvider.vendor.on('change_state', (state) =>
+            console.log('Estado de WhatsApp:', state)
+        )
+        adapterProvider.vendor.on('ready', () =>
+            console.log('Cliente de WhatsApp listo para vincularse.')
+        )
+        isProviderReady = createProviderReadiness(adapterProvider, {
+            onReady: () => {
+                console.log('WhatsApp está conectado; se habilitaron los recordatorios.')
+                sendBotActiveMessage(adapterProvider).catch((error) =>
+                    console.error('No se pudo enviar la confirmación de actividad:', error.message)
+                )
+            },
+            onDisconnect: () =>
+                console.warn('WhatsApp se desconectó; los recordatorios esperan la reconexión.'),
+        })
+        await createBot({
+            flow: adapterFlow,
+            provider: adapterProvider,
+            database: adapterDB,
+        })
+        if (portalPort !== null) QRPortalWeb({ port: portalPort })
+    } else {
+        console.log('WhatsApp desactivado; el servicio funciona como API y correo de resultados.')
+    }
     const matchApi = createMatchResultsServer({
         store: createMongoMatchResultsStore(database.collection('match_results')),
         watchStore: matchWatchStore,
         token: process.env.MATCH_API_TOKEN,
         qrPath: QR_FILE,
         isProviderReady,
-        requestPairingCode: (phone) => adapterProvider.vendor.requestPairingCode(phone),
+        requestPairingCode: adapterProvider
+            ? (phone) => adapterProvider.vendor.requestPairingCode(phone)
+            : undefined,
     })
     if (startupHealthServer) {
         await new Promise((resolve, reject) => {
@@ -321,9 +330,13 @@ const main = async () => {
         matchApi.listen(matchApiPort, MATCH_API_HOST, resolve)
     })
     const stopKeepalive = startKeepalive()
+    const stopEmailResults = startEmailResults({
+        loadMatches: fetchSportScoreMatches,
+    })
     const stopServer = await createRuntimeControl(async () => {
         console.log('Deteniendo el bot y cerrando WhatsApp de forma ordenada...')
         stopKeepalive()
+        stopEmailResults()
         stopScheduler()
         stopMatchWatchScheduler()
         const closeResource = async (label, close) => {
@@ -333,9 +346,11 @@ const main = async () => {
                 console.error(`${label}:`, error.message)
             }
         }
-        await closeResource('No se pudo cerrar el navegador de WhatsApp limpiamente', () =>
-            adapterProvider.vendor.destroy()
-        )
+        if (adapterProvider) {
+            await closeResource('No se pudo cerrar el navegador de WhatsApp limpiamente', () =>
+                adapterProvider.vendor.destroy()
+            )
+        }
         await closeResource(
             'No se pudo cerrar la API de resultados',
             () =>
@@ -380,12 +395,14 @@ const main = async () => {
     })
     console.log(`API de resultados disponible en http://${MATCH_API_HOST}:${matchApiPort}/api/matches`)
     if (IS_RENDER) console.log(`Health check disponible en http://${MATCH_API_HOST}:${matchApiPort}/health`)
-    const stopScheduler = startScheduler(adapterProvider, isProviderReady)
-    const stopMatchWatchScheduler = startMatchWatchScheduler(
-        adapterProvider,
-        matchWatchStore,
-        isProviderReady
-    )
+    if (adapterProvider) {
+        stopScheduler = startScheduler(adapterProvider, isProviderReady)
+        stopMatchWatchScheduler = startMatchWatchScheduler(
+            adapterProvider,
+            matchWatchStore,
+            isProviderReady
+        )
+    }
 }
 
 if (require.main === module) {

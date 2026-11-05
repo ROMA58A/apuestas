@@ -87,6 +87,11 @@ Al crear el servicio, configura `MONGODB_URI` con la URI privada de Atlas, `WHAT
 
 El plan Free de Render puede detener servicios y sus archivos son efímeros. El ping no ofrece disponibilidad garantizada ni conserva la sesión local de WhatsApp después de reinicios; por eso tendrás que volver a escanear el QR tras un reinicio. Para operación continua y persistencia de la sesión, utiliza un plan y almacenamiento persistente adecuados.
 
+Para usar Render solo como API y enviar resultados por correo, configura `DISABLE_WHATSAPP=true`,
+`RESULTS_EMAIL`, `GMAIL_USER` y una contraseña de aplicación de Gmail en las variables privadas.
+El servicio consulta fútbol y envía un correo cada minuto. La página externa del panel de partidos
+consulta los mismos resultados en vivo.
+
 ## Otras variables
 
 | Variable | Descripción |
