@@ -271,6 +271,21 @@ const main = async () => {
         makeMatchWatchFlow(matchWatchStore),
     ])
     const adapterProvider = createProvider(WebWhatsappProvider)
+    adapterProvider.vendor.on('authenticated', () =>
+        console.log('WhatsApp autenticado correctamente.')
+    )
+    adapterProvider.vendor.on('auth_failure', (message) =>
+        console.error('WhatsApp rechazó la autenticación:', message)
+    )
+    adapterProvider.vendor.on('disconnected', (reason) =>
+        console.warn('WhatsApp se desconectó:', reason)
+    )
+    adapterProvider.vendor.on('change_state', (state) =>
+        console.log('Estado de WhatsApp:', state)
+    )
+    adapterProvider.vendor.on('ready', () =>
+        console.log('Cliente de WhatsApp listo para vincularse.')
+    )
     const isProviderReady = createProviderReadiness(adapterProvider, {
         onReady: () => {
             console.log('WhatsApp está conectado; se habilitaron los recordatorios.')
