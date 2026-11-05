@@ -85,7 +85,7 @@ El archivo `render.yaml` configura el servicio web Docker. Render asigna `PORT`;
 
 Al crear el servicio, configura `MONGODB_URI` con la URI privada de Atlas, `WHATSAPP_DESTINATION` con el destinatario y confirma que la IP de salida de Render tenga acceso a Atlas (o configura el acceso de red correspondiente). El panel debe usar la URL pública del servicio y el `MATCH_API_TOKEN` generado por Render.
 
-El plan Free de Render puede detener servicios y sus archivos son efímeros. El ping no ofrece disponibilidad garantizada ni conserva la sesión local de WhatsApp después de reinicios; para operación continua y persistencia de la sesión, utiliza un plan y almacenamiento persistente adecuados.
+El plan Free de Render puede detener servicios y sus archivos son efímeros. El ping no ofrece disponibilidad garantizada ni conserva la sesión local de WhatsApp después de reinicios; por eso tendrás que volver a escanear el QR tras un reinicio. Para operación continua y persistencia de la sesión, utiliza un plan y almacenamiento persistente adecuados.
 
 ## Otras variables
 
