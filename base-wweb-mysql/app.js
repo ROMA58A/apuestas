@@ -34,7 +34,9 @@ const CHECK_TIME = process.env.CHECK_TIME || '09:00'
 const TIME_ZONE = process.env.TIME_ZONE || 'America/Mexico_City'
 const STATE_FILE = process.env.CHECK_STATE_FILE || './.investment-check-state.json'
 const RUNTIME_FILE = path.join(__dirname, '.bot-runtime.json')
-const IS_RENDER = Boolean(process.env.RENDER_EXTERNAL_URL)
+const IS_RENDER = Boolean(
+    process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_ID
+)
 const MONGODB_URI = process.env.MONGODB_URI
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'bot_whatsapp'
 const MATCH_API_HOST = process.env.MATCH_API_HOST || (IS_RENDER ? '0.0.0.0' : '127.0.0.1')
