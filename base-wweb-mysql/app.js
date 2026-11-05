@@ -12,6 +12,7 @@ const { createBot, createProvider, createFlow, addKeyword } = require('@bot-what
 const QRPortalWeb = require('@bot-whatsapp/portal')
 const WebWhatsappProvider = require('@bot-whatsapp/provider/web-whatsapp')
 const { MongoClient } = require('mongodb')
+const QRCode = require('qrcode')
 const {
     createMatchResultsServer,
 } = require('./match-results-api')
@@ -271,6 +272,15 @@ const main = async () => {
         makeMatchWatchFlow(matchWatchStore),
     ])
     const adapterProvider = createProvider(WebWhatsappProvider)
+    if (!adapterProvider.vendor || typeof adapterProvider.vendor.on !== 'function') {
+        throw new Error('El proveedor de WhatsApp no expone eventos para recibir el QR')
+    }
+    await fs.rm(QR_FILE, { force: true })
+    adapterProvider.vendor.on('qr', (qr) => {
+        QRCode.toFile(QR_FILE, qr)
+            .then(() => console.log('QR de WhatsApp actualizado.'))
+            .catch((error) => console.error('No se pudo guardar el QR de WhatsApp:', error.message))
+    })
     const isProviderReady = createProviderReadiness(adapterProvider, {
         onReady: () => {
             console.log('WhatsApp está conectado; se habilitaron los recordatorios.')
