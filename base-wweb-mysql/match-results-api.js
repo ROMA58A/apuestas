@@ -146,6 +146,71 @@ const createMatchResultsServer = ({
             sendJson(response, 200, { status: 'ok' })
             return
         }
+        if (url.pathname === '/qr-view') {
+            if (request.method !== 'GET') {
+                response.setHeader('Allow', 'GET')
+                sendJson(response, 405, { error: 'Método no permitido' })
+                return
+            }
+            response.writeHead(200, {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-store',
+                'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' blob: data:",
+            })
+            response.end(`<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR de WhatsApp</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:440px;margin:40px auto;padding:0 20px;text-align:center}
+input,button{box-sizing:border-box;width:100%;padding:12px;margin:6px 0;font-size:16px}
+button{cursor:pointer}
+#qr{max-width:100%;margin-top:20px}
+#message{min-height:24px}
+</style>
+</head>
+<body>
+<h1>QR de WhatsApp</h1>
+<p>Pega tu MATCH_API_TOKEN. No se guarda ni se envía a ningún sitio excepto este servicio.</p>
+<form id="form">
+<input id="token" type="password" autocomplete="off" placeholder="MATCH_API_TOKEN" required>
+<button type="submit">Mostrar QR</button>
+</form>
+<p id="message"></p>
+<img id="qr" alt="Código QR de WhatsApp" hidden>
+<script>
+const form = document.getElementById('form')
+const token = document.getElementById('token')
+const image = document.getElementById('qr')
+const message = document.getElementById('message')
+form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    image.hidden = true
+    message.textContent = 'Cargando...'
+    try {
+        const response = await fetch('/qr', {
+            headers: { Authorization: 'Bearer ' + token.value },
+            cache: 'no-store',
+        })
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}))
+            throw new Error(data.error || 'No se pudo obtener el QR')
+        }
+        const blob = await response.blob()
+        image.src = URL.createObjectURL(blob)
+        image.hidden = false
+        message.textContent = 'Escanéalo desde WhatsApp > Dispositivos vinculados.'
+    } catch (error) {
+        message.textContent = error.message
+    }
+})
+</script>
+</body>
+</html>`)
+            return
+        }
         if (url.pathname === '/qr') {
             if (request.method !== 'GET') {
                 response.setHeader('Allow', 'GET')
