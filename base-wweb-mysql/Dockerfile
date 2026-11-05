@@ -10,5 +10,6 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true \
 
 COPY . .
 RUN npm ci
+RUN node patch-web-whatsapp-provider.js
 
 CMD ["npm", "start"]
