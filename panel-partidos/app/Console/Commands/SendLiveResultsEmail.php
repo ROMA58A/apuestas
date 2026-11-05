@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Services\FootballResultsAggregator;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 
 class SendLiveResultsEmail extends Command
@@ -28,36 +28,30 @@ class SendLiveResultsEmail extends Command
         }
 
         try {
-            $matches = app(FootballResultsAggregator::class)->live();
+            $apiUrl = rtrim((string) config('services.match_api.url'), '/');
+            $matches = Http::acceptJson()
+                ->withToken((string) config('services.match_api.token'))
+                ->timeout(15)
+                ->get("{$apiUrl}/api/matches/watch")
+                ->throw()
+                ->json('matches', []);
+            $matches = collect($matches)
+                ->filter(fn (array $match): bool => trim((string) ($match['prediction'] ?? '')) !== '')
+                ->values()
+                ->all();
         } catch (\Throwable $exception) {
-            $this->error("No se pudieron consultar los resultados: {$exception->getMessage()}");
+            $this->error("No se pudieron consultar los partidos guardados: {$exception->getMessage()}");
 
             return self::FAILURE;
         }
 
-        $body = "Resultados de fútbol\n";
-        $body .= 'Enviado: '.now()->format('Y-m-d H:i:s')."\n\n";
-        $body .= collect($matches)->map(function (array $match): string {
-            $home = $match['home'] ?? 'Local';
-            $away = $match['away'] ?? 'Visitante';
-            $homeScore = $match['home_score'] ?? '-';
-            $awayScore = $match['away_score'] ?? '-';
-            $status = $match['status_text'] ?? ($match['status'] ?? 'Estado no disponible');
-
-            return "{$home} {$homeScore}-{$awayScore} {$away}\n{$status}";
-        })->join("\n\n");
-
-        if ($body === '') {
-            $body = 'No hay partidos en vivo o recientes en este momento.';
-        }
-
-        $body .= "\n\nFuentes consultadas: SportAPI, SportScore y Soccer Data.";
-        $body .= "\nFuente: Powered by SportScore — https://sportscore.com/";
-
         try {
-            Mail::raw($body, function ($message) use ($recipient): void {
+            Mail::send('emails.results', [
+                'matches' => $matches,
+                'sentAt' => now(),
+            ], function ($message) use ($recipient): void {
                 $message->to($recipient)
-                    ->subject('Resultados de fútbol');
+                    ->subject('Resultados de tus partidos');
             });
         } catch (\Throwable $exception) {
             $this->error("No se pudo enviar el correo: {$exception->getMessage()}");

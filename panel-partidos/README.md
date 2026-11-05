@@ -23,6 +23,10 @@ El panel envía los resultados de fútbol cada minuto a `RESULTS_EMAIL` (por def
 `ayalarodriguezr59@gmail.com`). Configura SMTP en `.env`; para Gmail usa una contraseña
 de aplicación, no la contraseña normal:
 
+El contenido HTML del correo está en `resources/views/emails/results.blade.php`.
+El comando consulta únicamente `/api/matches/watch` y envía solo los partidos guardados
+con pronóstico; no envía todos los partidos externos.
+
 ```env
 RESULTS_EMAIL=ayalarodriguezr59@gmail.com
 MAIL_MAILER=smtp
