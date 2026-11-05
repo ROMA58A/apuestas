@@ -40,4 +40,8 @@ return [
         'token' => env('MATCH_API_TOKEN'),
     ],
 
+    'results' => [
+        'email' => env('RESULTS_EMAIL', 'ayalarodriguer59@gmail.com'),
+    ],
+
 ];
