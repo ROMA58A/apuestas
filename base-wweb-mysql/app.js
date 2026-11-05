@@ -3,6 +3,7 @@ require('dotenv').config()
 const fs = require('node:fs/promises')
 const fsSync = require('node:fs')
 const path = require('node:path')
+const http = require('node:http')
 const { findAvailablePort } = require('./server-port')
 const { createProviderReadiness } = require('./provider-readiness')
 const { createRuntimeControl } = require('./runtime-control')
@@ -219,7 +220,29 @@ const startScheduler = (provider, isProviderReady = () => true) => {
 const main = async () => {
     validateConfiguration()
 
-    const mongoClient = new MongoClient(MONGODB_URI)
+    const startupHealthServer = IS_RENDER
+        ? http.createServer((request, response) => {
+              if (request.method === 'GET' && request.url === '/health') {
+                  response.writeHead(200, {
+                      'Content-Type': 'application/json; charset=utf-8',
+                  })
+                  response.end(JSON.stringify({ status: 'starting' }))
+                  return
+              }
+              response.writeHead(404)
+              response.end()
+          })
+        : null
+    if (startupHealthServer) {
+        await new Promise((resolve, reject) => {
+            startupHealthServer.once('error', reject)
+            startupHealthServer.listen(MATCH_API_PORT, MATCH_API_HOST, resolve)
+        })
+    }
+
+    const mongoClient = new MongoClient(MONGODB_URI, {
+        serverSelectionTimeoutMS: 15_000,
+    })
     await mongoClient.connect()
     const database = mongoClient.db(MONGODB_DB_NAME)
     await createMongoIndexes(database)
@@ -267,6 +290,11 @@ const main = async () => {
         watchStore: matchWatchStore,
         token: process.env.MATCH_API_TOKEN,
     })
+    if (startupHealthServer) {
+        await new Promise((resolve, reject) => {
+            startupHealthServer.close((error) => (error ? reject(error) : resolve()))
+        })
+    }
     await new Promise((resolve, reject) => {
         matchApi.once('error', reject)
         matchApi.listen(matchApiPort, MATCH_API_HOST, resolve)
