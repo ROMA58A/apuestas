@@ -12,7 +12,6 @@ const { createBot, createProvider, createFlow, addKeyword } = require('@bot-what
 const QRPortalWeb = require('@bot-whatsapp/portal')
 const WebWhatsappProvider = require('@bot-whatsapp/provider/web-whatsapp')
 const { MongoClient } = require('mongodb')
-const QRCode = require('qrcode')
 const {
     createMatchResultsServer,
 } = require('./match-results-api')
@@ -35,7 +34,7 @@ const CHECK_TIME = process.env.CHECK_TIME || '09:00'
 const TIME_ZONE = process.env.TIME_ZONE || 'America/Mexico_City'
 const STATE_FILE = process.env.CHECK_STATE_FILE || './.investment-check-state.json'
 const RUNTIME_FILE = path.join(__dirname, '.bot-runtime.json')
-const QR_FILE = path.join(__dirname, 'bot.qr.png')
+const QR_FILE = path.join(process.cwd(), 'bot.qr.png')
 const IS_RENDER = Boolean(
     process.env.RENDER_EXTERNAL_URL || process.env.RENDER_SERVICE_ID
 )
@@ -272,15 +271,6 @@ const main = async () => {
         makeMatchWatchFlow(matchWatchStore),
     ])
     const adapterProvider = createProvider(WebWhatsappProvider)
-    if (!adapterProvider.vendor || typeof adapterProvider.vendor.on !== 'function') {
-        throw new Error('El proveedor de WhatsApp no expone eventos para recibir el QR')
-    }
-    await fs.rm(QR_FILE, { force: true })
-    adapterProvider.vendor.on('qr', (qr) => {
-        QRCode.toFile(QR_FILE, qr)
-            .then(() => console.log('QR de WhatsApp actualizado.'))
-            .catch((error) => console.error('No se pudo guardar el QR de WhatsApp:', error.message))
-    })
     const isProviderReady = createProviderReadiness(adapterProvider, {
         onReady: () => {
             console.log('WhatsApp está conectado; se habilitaron los recordatorios.')
