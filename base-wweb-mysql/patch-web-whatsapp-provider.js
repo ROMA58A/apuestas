@@ -16,13 +16,17 @@ if (!source.includes(original)) {
 
 let patchedSource = source.replace(original, replacement)
 const browserArgs = "['--no-sandbox', '--disable-setuid-sandbox', '--unhandled-rejections=strict']"
-const optimizedBrowserArgs = "['--no-sandbox', '--disable-setuid-sandbox', '--unhandled-rejections=strict', '--disable-dev-shm-usage', '--disable-gpu', '--disable-extensions', '--no-first-run', '--disable-background-networking']"
+const previousOptimizedBrowserArgs = "['--no-sandbox', '--disable-setuid-sandbox', '--unhandled-rejections=strict', '--disable-dev-shm-usage', '--disable-gpu', '--disable-extensions', '--no-first-run', '--disable-background-networking']"
+const optimizedBrowserArgs = "['--no-sandbox', '--disable-setuid-sandbox', '--unhandled-rejections=strict', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-extensions', '--no-first-run', '--disable-background-networking', '--single-process', '--no-zygote', '--renderer-process-limit=1', '--js-flags=--max_old_space_size=128']"
 
 if (!patchedSource.includes(optimizedBrowserArgs)) {
-    if (!patchedSource.includes(browserArgs)) {
+    if (patchedSource.includes(previousOptimizedBrowserArgs)) {
+        patchedSource = patchedSource.replace(previousOptimizedBrowserArgs, optimizedBrowserArgs)
+    } else if (patchedSource.includes(browserArgs)) {
+        patchedSource = patchedSource.replace(browserArgs, optimizedBrowserArgs)
+    } else {
         throw new Error('No se encontraron los argumentos de Chromium esperados')
     }
-    patchedSource = patchedSource.replace(browserArgs, optimizedBrowserArgs)
 }
 
 fs.writeFileSync(providerPath, patchedSource)
