@@ -21,6 +21,11 @@ class SendLiveResultsEmail extends Command
 
             return self::FAILURE;
         }
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL) === false) {
+            $this->error("RESULTS_EMAIL no es válido: {$recipient}");
+
+            return self::FAILURE;
+        }
 
         try {
             $matches = app(FootballResultsAggregator::class)->live();
@@ -30,7 +35,9 @@ class SendLiveResultsEmail extends Command
             return self::FAILURE;
         }
 
-        $body = collect($matches)->map(function (array $match): string {
+        $body = "Resultados de fútbol\n";
+        $body .= 'Enviado: '.now()->format('Y-m-d H:i:s')."\n\n";
+        $body .= collect($matches)->map(function (array $match): string {
             $home = $match['home'] ?? 'Local';
             $away = $match['away'] ?? 'Visitante';
             $homeScore = $match['home_score'] ?? '-';
@@ -44,7 +51,8 @@ class SendLiveResultsEmail extends Command
             $body = 'No hay partidos en vivo o recientes en este momento.';
         }
 
-        $body .= "\n\nFuente: Powered by SportScore — https://sportscore.com/";
+        $body .= "\n\nFuentes consultadas: SportAPI, SportScore y Soccer Data.";
+        $body .= "\nFuente: Powered by SportScore — https://sportscore.com/";
 
         try {
             Mail::raw($body, function ($message) use ($recipient): void {
@@ -57,7 +65,7 @@ class SendLiveResultsEmail extends Command
             return self::FAILURE;
         }
 
-        $this->info("Resultados enviados a {$recipient}.");
+        $this->info("Correo enviado correctamente a {$recipient} con el asunto \"Resultados de fútbol\".");
 
         return self::SUCCESS;
     }

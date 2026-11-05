@@ -41,7 +41,7 @@ return [
     ],
 
     'results' => [
-        'email' => env('RESULTS_EMAIL', 'ayalarodriguer59@gmail.com'),
+        'email' => env('RESULTS_EMAIL', 'ayalarodriguezr59@gmail.com'),
     ],
     'sportapi' => [
         'key' => env('SPORTAPI_KEY'),

@@ -20,11 +20,11 @@ Abre `http://127.0.0.1:8000`. Configura `MATCH_API_URL` (por defecto `http://127
 ## Correos de resultados
 
 El panel envía los resultados de fútbol cada minuto a `RESULTS_EMAIL` (por defecto,
-`ayalarodriguer59@gmail.com`). Configura SMTP en `.env`; para Gmail usa una contraseña
+`ayalarodriguezr59@gmail.com`). Configura SMTP en `.env`; para Gmail usa una contraseña
 de aplicación, no la contraseña normal:
 
 ```env
-RESULTS_EMAIL=ayalarodriguer59@gmail.com
+RESULTS_EMAIL=ayalarodriguezr59@gmail.com
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
