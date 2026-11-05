@@ -189,6 +189,7 @@ const image = document.getElementById('qr')
 const message = document.getElementById('message')
 const connection = document.getElementById('connection')
 let statusTimer
+let qrTimer
 const updateConnection = async () => {
     if (!token.value) return
     try {
@@ -209,10 +210,7 @@ const updateConnection = async () => {
         connection.textContent = 'Estado: comprobando conexión...'
     }
 }
-form.addEventListener('submit', async (event) => {
-    event.preventDefault()
-    image.hidden = true
-    message.textContent = 'Cargando...'
+const refreshQr = async () => {
     try {
         const response = await fetch('/qr', {
             headers: { Authorization: 'Bearer ' + token.value },
@@ -223,14 +221,23 @@ form.addEventListener('submit', async (event) => {
             throw new Error(data.error || 'No se pudo obtener el QR')
         }
         const blob = await response.blob()
+        const previousUrl = image.src
         image.src = URL.createObjectURL(blob)
+        if (previousUrl.startsWith('blob:')) URL.revokeObjectURL(previousUrl)
         image.hidden = false
-        message.textContent = 'Escanéalo desde WhatsApp > Dispositivos vinculados.'
-        await updateConnection()
-        if (!statusTimer) statusTimer = setInterval(updateConnection, 3000)
+        message.textContent = 'QR actualizado. Escanéalo desde WhatsApp > Dispositivos vinculados.'
     } catch (error) {
         message.textContent = error.message
     }
+}
+form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    image.hidden = true
+    message.textContent = 'Cargando...'
+    await refreshQr()
+    await updateConnection()
+    if (!statusTimer) statusTimer = setInterval(updateConnection, 3000)
+    if (!qrTimer) qrTimer = setInterval(refreshQr, 20000)
 })
 </script>
 </body>
