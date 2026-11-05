@@ -135,6 +135,7 @@ const createMatchResultsServer = ({
     loadLiveMatches = fetchSportScoreMatches,
     qrPath,
     isProviderReady = () => false,
+    requestPairingCode,
 }) =>
     http.createServer(async (request, response) => {
         const url = new URL(request.url, 'http://localhost')
@@ -179,6 +180,10 @@ button{cursor:pointer}
 <input id="token" type="password" autocomplete="off" placeholder="MATCH_API_TOKEN" required>
 <button type="submit">Mostrar QR</button>
 </form>
+<form id="pairing-form">
+<input id="phone" inputmode="numeric" autocomplete="tel" placeholder="Número WhatsApp, con país y sin +" pattern="[0-9]{7,15}" required>
+<button type="submit">Solicitar código de vinculación</button>
+</form>
 <p id="message"></p>
 <p id="connection" aria-live="polite">Estado: esperando conexión...</p>
 <img id="qr" alt="Código QR de WhatsApp" hidden>
@@ -187,6 +192,8 @@ const form = document.getElementById('form')
 const token = document.getElementById('token')
 const image = document.getElementById('qr')
 const message = document.getElementById('message')
+const pairingForm = document.getElementById('pairing-form')
+const phone = document.getElementById('phone')
 const connection = document.getElementById('connection')
 let statusTimer
 let qrTimer
@@ -239,6 +246,21 @@ form.addEventListener('submit', async (event) => {
     if (!statusTimer) statusTimer = setInterval(updateConnection, 3000)
     if (!qrTimer) qrTimer = setInterval(refreshQr, 20000)
 })
+pairingForm.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    message.textContent = 'Solicitando código...'
+    try {
+        const response = await fetch('/pairing-code?phone=' + encodeURIComponent(phone.value), {
+            headers: { Authorization: 'Bearer ' + token.value },
+            cache: 'no-store',
+        })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'No se pudo obtener el código')
+        message.textContent = 'Código de vinculación: ' + data.code + '. En WhatsApp usa Dispositivos vinculados > Vincular con número de teléfono.'
+    } catch (error) {
+        message.textContent = error.message
+    }
+})
 </script>
 </body>
 </html>`)
@@ -255,6 +277,34 @@ form.addEventListener('submit', async (event) => {
                 return
             }
             sendJson(response, 200, { connected: Boolean(isProviderReady()) })
+            return
+        }
+        if (url.pathname === '/pairing-code') {
+            if (request.method !== 'GET') {
+                response.setHeader('Allow', 'GET')
+                sendJson(response, 405, { error: 'Método no permitido' })
+                return
+            }
+            if (!hasValidToken(request, token)) {
+                sendJson(response, 401, { error: 'Token no válido' })
+                return
+            }
+            if (typeof requestPairingCode !== 'function') {
+                sendJson(response, 503, { error: 'El código de vinculación no está disponible' })
+                return
+            }
+            const phone = url.searchParams.get('phone') || ''
+            if (!/^\d{7,15}$/.test(phone)) {
+                sendJson(response, 400, { error: 'Usa el número internacional sin + ni espacios' })
+                return
+            }
+            try {
+                const code = await requestPairingCode(phone)
+                sendJson(response, 200, { code })
+            } catch (error) {
+                console.error('No se pudo solicitar el código de vinculación:', error.message)
+                sendJson(response, 503, { error: 'WhatsApp todavía no permite solicitar el código; espera unos segundos y vuelve a intentar' })
+            }
             return
         }
         if (url.pathname === '/qr') {

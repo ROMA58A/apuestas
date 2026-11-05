@@ -309,6 +309,7 @@ const main = async () => {
         token: process.env.MATCH_API_TOKEN,
         qrPath: QR_FILE,
         isProviderReady,
+        requestPairingCode: (phone) => adapterProvider.vendor.requestPairingCode(phone),
     })
     if (startupHealthServer) {
         await new Promise((resolve, reject) => {
