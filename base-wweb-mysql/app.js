@@ -47,7 +47,7 @@ const MATCH_API_PORT = Number(
 )
 const PORTAL_PORT = Number(process.env.PORTAL_PORT || process.env.PORT || 3000)
 const MATCH_WATCH_INTERVAL = 60_000
-const WHATSAPP_ENABLED = process.env.DISABLE_WHATSAPP !== 'true'
+const WHATSAPP_ENABLED = !IS_RENDER && process.env.DISABLE_WHATSAPP !== 'true'
 
 const validateConfiguration = () => {
     const required = ['MONGODB_URI']
