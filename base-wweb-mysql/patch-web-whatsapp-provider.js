@@ -14,4 +14,15 @@ if (!source.includes(original)) {
     throw new Error(`No se encontró el limpiador QR esperado en ${path.basename(providerPath)}`)
 }
 
-fs.writeFileSync(providerPath, source.replace(original, replacement))
+let patchedSource = source.replace(original, replacement)
+const browserArgs = "['--no-sandbox', '--disable-setuid-sandbox', '--unhandled-rejections=strict']"
+const optimizedBrowserArgs = "['--no-sandbox', '--disable-setuid-sandbox', '--unhandled-rejections=strict', '--disable-dev-shm-usage', '--disable-gpu', '--disable-extensions', '--no-first-run', '--disable-background-networking']"
+
+if (!patchedSource.includes(optimizedBrowserArgs)) {
+    if (!patchedSource.includes(browserArgs)) {
+        throw new Error('No se encontraron los argumentos de Chromium esperados')
+    }
+    patchedSource = patchedSource.replace(browserArgs, optimizedBrowserArgs)
+}
+
+fs.writeFileSync(providerPath, patchedSource)
